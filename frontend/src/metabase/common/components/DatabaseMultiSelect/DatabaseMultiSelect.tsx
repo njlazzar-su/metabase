@@ -136,7 +136,7 @@ export const DatabaseMultiSelect = ({
                 onFocus={() => combobox.openDropdown()}
                 onBlur={() => combobox.closeDropdown()}
                 value={search}
-                placeholder={selectedDatabases.length === 0 ? placeholder : ""}
+                placeholder={placeholder}
                 onChange={(event) => {
                   combobox.updateSelectedOptionIndex();
                   setSearch(event.currentTarget.value);
