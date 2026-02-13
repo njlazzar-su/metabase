@@ -9,6 +9,8 @@ import { DatabaseMultiSelect } from "metabase/common/components/DatabaseMultiSel
 import { Button, Flex, Stack, Text } from "metabase/ui";
 import type { Database, DatabaseId } from "metabase-types/api";
 
+import { useCreateConnectionImpersonations } from "./hooks/use-create-connection-impersonations";
+
 const supportsConnectionImpersonation = (db: Database) =>
   db.features?.includes("connection-impersonation") ?? false;
 
@@ -37,6 +39,12 @@ export const ConnectionImpersonationStepContent = ({
   const [selectedDatabaseIds, setSelectedDatabaseIds] = useState<DatabaseId[]>(
     [],
   );
+
+  const { handleCreateImpersonations, isCreating } =
+    useCreateConnectionImpersonations({
+      databaseIds: selectedDatabaseIds,
+      onSuccess: onNext,
+    });
 
   const isNextDisabled = selectedDatabaseIds.length === 0;
 
@@ -75,7 +83,12 @@ export const ConnectionImpersonationStepContent = ({
       />
 
       <Flex justify="flex-end">
-        <Button variant="filled" disabled={isNextDisabled} onClick={onNext}>
+        <Button
+          variant="filled"
+          disabled={isNextDisabled}
+          loading={isCreating}
+          onClick={handleCreateImpersonations}
+        >
           {t`Next`}
         </Button>
       </Flex>
