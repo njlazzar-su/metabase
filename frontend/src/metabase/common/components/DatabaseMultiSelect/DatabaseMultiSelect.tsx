@@ -113,6 +113,8 @@ export const DatabaseMultiSelect = ({
       onOptionSubmit={handleValueSelect}
       withinPortal
       disabled={disabled}
+      position="bottom-start"
+      width={360}
     >
       <Combobox.DropdownTarget>
         <PillsInput
