@@ -74,7 +74,7 @@ export const DatabaseMultiSelect = ({
   };
 
   const pills = selectedDatabases.map((database) => (
-    <Pill key={database.id} px="md" py="6px" classNames={{ root: S.pill }}>
+    <Pill key={database.id} px="md" py="6px">
       <Flex align="center" gap="sm" className={S.pillContent}>
         <Icon name="database" size={16} />
 
@@ -123,6 +123,7 @@ export const DatabaseMultiSelect = ({
           data-testid={dataTestId}
           rightSection={<Combobox.Chevron />}
           rightSectionPointerEvents="none"
+          rightSectionWidth="3rem"
           classNames={{
             input: S.input,
           }}
@@ -131,6 +132,7 @@ export const DatabaseMultiSelect = ({
             {pills}
             <Combobox.EventsTarget>
               <PillsInput.Field
+                className={S.field}
                 onFocus={() => combobox.openDropdown()}
                 onBlur={() => combobox.closeDropdown()}
                 value={search}
