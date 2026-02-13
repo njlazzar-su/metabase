@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { t } from "ttag";
 
 import { useListDatabasesQuery } from "metabase/api";
 import { DatabaseMultiSelect } from "metabase/common/components/DatabaseMultiSelect";
 import { Button, Flex, Stack, Text } from "metabase/ui";
-import type { DatabaseId } from "metabase-types/api";
+import type { Database, DatabaseId } from "metabase-types/api";
 
 interface ConnectionImpersonationStepContentProps {
   onNext: () => void;
@@ -32,6 +32,11 @@ export const ConnectionImpersonationStepContent = ({
         databases={databases}
         value={selectedDatabaseIds}
         onChange={setSelectedDatabaseIds}
+        isOptionDisabled={useCallback(
+          (db: Database) => !db.features?.includes("connection-impersonation"),
+          [],
+        )}
+        disabledOptionTooltip={t`This database doesn't support connection impersonation`}
       />
 
       <Flex justify="flex-end">
