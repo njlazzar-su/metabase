@@ -975,37 +975,68 @@ describe("scenarios - embedding hub", () => {
     it("should configure connection impersonation for selected databases", function () {
       H.addPostgresDatabase("QA Postgres12");
 
-      cy.visit("/admin/embedding/setup-guide/permissions");
+      cy.get<number>("@postgresID").then((postgresId) => {
+        cy.visit("/admin/embedding/setup-guide/permissions");
 
-      H.main()
-        .findByRole("radio", { name: /Connection impersonation/ })
-        .scrollIntoView()
-        .click();
+        H.main()
+          .findByRole("radio", { name: /Connection impersonation/ })
+          .scrollIntoView()
+          .click();
 
-      H.main()
-        .findByRole("button", { name: "Use connection impersonation" })
-        .scrollIntoView()
-        .click();
+        H.main()
+          .findByRole("button", { name: "Use connection impersonation" })
+          .scrollIntoView()
+          .click();
 
-      cy.log("select database");
-      H.main().findByPlaceholderText("Pick a database").click();
-      H.popover().findByText("QA Postgres12").click();
+        cy.log("select database");
+        H.main().findByPlaceholderText("Pick a database").click();
+        H.popover().findByText("QA Postgres12").click();
 
-      cy.log("database should be selected in the multi-select pill");
-      H.main().findByLabelText("Remove QA Postgres12").should("exist");
-      H.main().findByText("QA Postgres12").should("be.visible");
+        cy.log("database should be selected in the multi-select pill");
+        H.main().findByLabelText("Remove QA Postgres12").should("exist");
+        H.main().findByText("QA Postgres12").should("be.visible");
 
-      cy.log("setup connection impersonation for the database");
-      H.main().findByRole("button", { name: "Next" }).click();
+        cy.log("setup connection impersonation for the database");
+        H.main().findByRole("button", { name: "Next" }).click();
 
-      cy.log("step should be marked as complete");
-      H.main()
-        .findByRole("listitem", {
-          name: "Select data to make available",
-          timeout: 10_000,
-        })
-        .icon("check")
-        .should("exist");
+        cy.log("step should be marked as complete");
+        H.main()
+          .findByRole("listitem", {
+            name: "Select data to make available",
+            timeout: 10_000,
+          })
+          .icon("check")
+          .should("exist");
+
+        cy.log("connection impersonation policy should be created");
+        cy.request("GET", "/api/ee/advanced-permissions/impersonation").should(
+          (response) => {
+            const policies = response.body;
+            expect(policies.length).to.be.at.least(1);
+
+            const postgresPolicy = policies.find(
+              (policy: { db_id: number }) => policy.db_id === postgresId,
+            );
+
+            expect(postgresPolicy).to.exist;
+            expect(postgresPolicy.attribute).to.equal("database_role");
+          },
+        );
+
+        cy.log("permission graph should have impersonated view-data");
+        cy.request(
+          "GET",
+          `/api/permissions/graph/group/${ALL_EXTERNAL_USERS_GROUP_ID}`,
+        ).should((response) => {
+          const graph = response.body;
+
+          const permissions =
+            graph.groups[ALL_EXTERNAL_USERS_GROUP_ID!][postgresId as number];
+
+          expect(permissions).to.exist;
+          expect(permissions["view-data"]).to.equal("impersonated");
+        });
+      });
     });
 
     it("should show 'no compatible databases' message when only Sample Database exists", () => {
