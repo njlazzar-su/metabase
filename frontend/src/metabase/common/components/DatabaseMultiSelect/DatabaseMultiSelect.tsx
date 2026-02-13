@@ -158,7 +158,7 @@ export const DatabaseMultiSelect = ({
         </PillsInput>
       </Combobox.DropdownTarget>
 
-      <Combobox.Dropdown className={S.dropdown}>
+      <Combobox.Dropdown>
         <Combobox.Options>
           <ScrollArea.Autosize mah={200} type="scroll">
             {options.length > 0 ? (
