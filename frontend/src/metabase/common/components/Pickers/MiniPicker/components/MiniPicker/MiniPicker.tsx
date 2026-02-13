@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { useCallback, useEffect, useMemo } from "react";
 
 import { PLUGIN_LIBRARY } from "metabase/plugins";
@@ -26,6 +27,11 @@ export type MiniPickerProps = {
   onBrowseAll?: () => void;
   shouldHide?: (item: MiniPickerItem | unknown) => boolean;
   shouldShowLibrary?: boolean;
+
+  /**
+   * Props to pass to Menu.Dropdown, useful for customizing positioning.
+   **/
+  dropdownProps?: Omit<ComponentProps<typeof Menu.Dropdown>, "children">;
 };
 
 export function MiniPicker({
@@ -39,6 +45,7 @@ export function MiniPicker({
   trapFocus = false,
   shouldHide,
   shouldShowLibrary = true,
+  dropdownProps,
 }: MiniPickerProps) {
   const { data: libraryCollection } = PLUGIN_LIBRARY.useGetLibraryCollection();
 
@@ -104,6 +111,7 @@ export function MiniPicker({
           px={0}
           py="sm"
           data-testid="mini-picker"
+          {...dropdownProps}
         >
           {isLoadingPath ? <MiniPickerListLoader /> : <MiniPickerPane />}
         </Menu.Dropdown>

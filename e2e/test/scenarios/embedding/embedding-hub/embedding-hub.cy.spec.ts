@@ -1,9 +1,10 @@
 import { SAMPLE_DB_TABLES } from "e2e/support/cypress_data";
+import { ALL_EXTERNAL_USERS_GROUP_ID } from "e2e/support/cypress_sample_instance_data";
 import { enableJwtAuth } from "e2e/support/helpers/e2e-jwt-helpers";
 
 const { H } = cy;
 
-const { STATIC_ORDERS_ID } = SAMPLE_DB_TABLES;
+const { STATIC_ORDERS_ID, STATIC_PEOPLE_ID } = SAMPLE_DB_TABLES;
 
 describe("scenarios - embedding hub", () => {
   describe("checklist", () => {
@@ -736,6 +737,224 @@ describe("scenarios - embedding hub", () => {
         cy.log("we should still be on the create tenants step");
         H.main().findByPlaceholderText("Tenant name").should("be.visible");
       });
+    });
+
+    it("should create sandboxes for multiple tables via row-level security setup", () => {
+      H.restore("setup");
+      cy.signInAsAdmin();
+      H.activateToken("bleeding-edge");
+
+      cy.visit("/admin/embedding/setup-guide/permissions");
+
+      H.main()
+        .findByRole("button", {
+          name: "Enable tenants and create shared collection",
+        })
+        .click();
+
+      cy.log("wait for tenants to be enabled");
+      H.main()
+        .findByRole("listitem", {
+          name: "Enable multi-tenant user strategy",
+          timeout: 10_000,
+        })
+        .icon("check")
+        .should("exist");
+
+      H.main()
+        .findByRole("radio", { name: /Row and column level security/ })
+        .scrollIntoView()
+        .click();
+
+      H.main()
+        .findByRole("button", { name: "Use row and column level security" })
+        .scrollIntoView()
+        .click();
+
+      cy.log("pick first table and column");
+      H.main().findByText("Pick a table").click();
+
+      H.miniPicker().findByText("Sample Database").click();
+      H.miniPicker().findByText("Orders").click();
+
+      H.main().findByPlaceholderText("Pick a column").click();
+      H.popover().findByText("User ID").click();
+
+      cy.log("pick second table and column");
+      H.main().findByText("Add table").click();
+      H.main().findAllByText("Pick a table").first().click();
+
+      H.miniPicker().findByText("Sample Database").click();
+      H.miniPicker().findByText("People").click();
+
+      H.main()
+        .findAllByPlaceholderText("Pick a column")
+        .should("have.length", 2)
+        .last()
+        .click();
+
+      H.popover().findByText("ID").click();
+
+      cy.log("create sandbox");
+      H.main().findByRole("button", { name: "Next" }).click();
+
+      cy.log("no error toast should appear");
+      H.undoToast().should("not.exist");
+
+      cy.log("access policies should be created");
+      cy.request("GET", "/api/mt/gtap").should((response) => {
+        const policies = response.body;
+        expect(policies.length).to.be.at.least(2);
+
+        const orderPolicy = policies.find(
+          (policy: { table_id: number }) =>
+            policy.table_id === STATIC_ORDERS_ID,
+        );
+
+        const peoplePolicy = policies.find(
+          (policy: { table_id: number }) =>
+            policy.table_id === STATIC_PEOPLE_ID,
+        );
+
+        expect(orderPolicy).to.exist;
+        expect(peoplePolicy).to.exist;
+
+        expect(orderPolicy.attribute_remappings).to.have.property(
+          "tenant_identifier",
+        );
+
+        expect(peoplePolicy.attribute_remappings).to.have.property(
+          "tenant_identifier",
+        );
+      });
+
+      cy.log("permissions graph should have sandboxed view-data");
+      cy.request(
+        "GET",
+        `/api/permissions/graph/group/${ALL_EXTERNAL_USERS_GROUP_ID}`,
+      ).should((response) => {
+        const graph = response.body;
+
+        // [1] is for sample database, public schema.
+        const permissions = graph.groups[ALL_EXTERNAL_USERS_GROUP_ID!][1];
+        expect(permissions).to.exist;
+
+        const viewData = permissions["view-data"];
+        expect(viewData).to.exist;
+        expect(viewData["PUBLIC"][STATIC_ORDERS_ID]).to.equal("sandboxed");
+        expect(viewData["PUBLIC"][STATIC_PEOPLE_ID]).to.equal("sandboxed");
+      });
+
+      H.main()
+        .findByRole("listitem", {
+          name: "Select data to make available",
+          timeout: 10_000,
+        })
+        .icon("check")
+        .should("exist");
+    });
+
+    it("should update existing sandboxes when changing column selection", () => {
+      H.restore("setup");
+      cy.signInAsAdmin();
+      H.activateToken("bleeding-edge");
+
+      // We use API setup here instead of clicking through the UI because:
+      // 1. This test verifies the UPDATE flow (not CREATE), which requires a sandbox to already exist
+      // 2. The sandbox can only be created after tenants are enabled (which creates the all-external-users group)
+      // 3. Using API calls is cleaner for test data preparation than clicking through UI twice
+      cy.log("enable tenants to create the all-external-users");
+      H.updateSetting("use-tenants", true);
+
+      cy.log("create shared collection");
+      cy.request("POST", "/api/collection", {
+        name: "Shared collection",
+        parent_id: null,
+        namespace: "shared-tenant-collection",
+      });
+
+      cy.log("create an existing sandbox for Orders table via API");
+      cy.request("GET", "/api/permissions/group").then((response) => {
+        const allExternalUsersGroup = response.body.find(
+          (g: { magic_group_type: string }) =>
+            g.magic_group_type === "all-external-users",
+        );
+
+        cy.request("POST", "/api/mt/gtap", {
+          table_id: STATIC_ORDERS_ID,
+          group_id: allExternalUsersGroup.id,
+          card_id: null,
+          attribute_remappings: {
+            tenant_identifier: ["dimension", ["field", 2, null]], // USER_ID field
+          },
+        });
+      });
+
+      cy.visit("/admin/embedding/setup-guide/permissions");
+
+      cy.log("wait for the all steps to collapse");
+      H.main()
+        .findByRole("radio", { name: /Row and column level security/ })
+        .should("not.exist");
+
+      H.main()
+        .findByText("Which data segregation strategy does your database use?")
+        .scrollIntoView()
+        .should("be.visible")
+        .click();
+
+      cy.log("select row and column level security strategy");
+      H.main()
+        .findByRole("radio", { name: /Row and column level security/ })
+        .scrollIntoView()
+        .click();
+
+      H.main()
+        .findByRole("button", { name: "Use row and column level security" })
+        .scrollIntoView()
+        .click();
+
+      cy.log("Select the same Orders table");
+      H.main().findByText("Pick a table").click();
+      H.miniPicker().findByText("Sample Database").click();
+      H.miniPicker().findByText("Orders").click();
+
+      cy.log("select Product ID column instead of User ID");
+      H.main().findByPlaceholderText("Pick a column").click();
+      H.popover().findByText("Product ID").click();
+      H.main().findByRole("button", { name: "Next" }).click();
+
+      cy.log("error toast should not appear");
+      H.undoToast().should("not.exist");
+
+      cy.log("sandbox should be updated and not created");
+      cy.request("GET", "/api/mt/gtap").should((response) => {
+        const policies = response.body;
+
+        const orderPolicies = policies.filter(
+          (policy: { table_id: number }) =>
+            policy.table_id === STATIC_ORDERS_ID,
+        );
+
+        // should only have one sandbox for Orders table
+        expect(orderPolicies.length).to.equal(1);
+
+        const [orderPolicy] = orderPolicies;
+        const tenantFieldRef =
+          orderPolicy.attribute_remappings.tenant_identifier;
+
+        // attribute_remappings should reference field 3 (PRODUCT_ID),
+        // not field 2 (USER_ID)
+        expect(tenantFieldRef[1][1]).to.equal(3);
+      });
+
+      H.main()
+        .findByRole("listitem", {
+          name: "Select data to make available",
+          timeout: 10_000,
+        })
+        .icon("check")
+        .should("exist");
     });
   });
 });
