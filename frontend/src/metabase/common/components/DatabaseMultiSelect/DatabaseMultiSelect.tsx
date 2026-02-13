@@ -53,9 +53,11 @@ export const DatabaseMultiSelect = ({
 
   const filteredDatabases = useMemo(() => {
     const searchLower = search.toLowerCase().trim();
+
     if (!searchLower) {
       return unselectedDatabases;
     }
+
     return unselectedDatabases.filter((db) =>
       db.name.toLowerCase().includes(searchLower),
     );
@@ -67,9 +69,11 @@ export const DatabaseMultiSelect = ({
 
   const handleValueSelect = (databaseId: string) => {
     const id = Number(databaseId);
+
     if (!value.includes(id)) {
       onChange([...value, id]);
     }
+
     setSearch("");
   };
 
@@ -102,6 +106,7 @@ export const DatabaseMultiSelect = ({
     >
       <Flex align="center" gap="sm">
         <Icon name="database" size={16} className={S.optionIcon} />
+
         <Text size="md">{database.name}</Text>
       </Flex>
     </Combobox.Option>
@@ -130,6 +135,7 @@ export const DatabaseMultiSelect = ({
         >
           <Pill.Group className={S.pillGroup}>
             {pills}
+
             <Combobox.EventsTarget>
               <PillsInput.Field
                 className={S.field}
