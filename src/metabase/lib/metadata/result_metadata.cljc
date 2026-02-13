@@ -22,13 +22,14 @@
    [metabase.lib.field.util :as lib.field.util]
    [metabase.lib.join :as lib.join]
    [metabase.lib.join.util :as lib.join.util]
-
    [metabase.lib.metadata.calculation :as lib.metadata.calculation]
+   [metabase.lib.normalize :as lib.normalize]
    [metabase.lib.options :as lib.options]
    [metabase.lib.ref :as lib.ref]
    [metabase.lib.schema :as lib.schema]
    [metabase.lib.schema.common :as lib.schema.common]
    [metabase.lib.schema.metadata :as lib.schema.metadata]
+   [metabase.lib.temporal-bucket :as lib.temporal-bucket]
    [metabase.lib.util :as lib.util]
    [metabase.lib.util.match :as lib.util.match]
    [metabase.util :as u]
@@ -486,3 +487,18 @@
    (->> initial-cols
         (add-extra-metadata query)
         cols->legacy-metadata)))
+
+(defn normalize-result-metadata-column
+  "Normalizes either a modern MBQL 5 `::lib.schema.metadata/column` or legacy `:result_metadata` column as it comes
+  out of AppDB. This is called by [[metabase.models.interface/result-metadata-out]]."
+  [col]
+  #?(:clj  (if (:lib/type col)
+             (lib.normalize/normalize ::lib.schema.metadata/column col)
+             ;; legacy usages -- do not use these going forward
+             #_{:clj-kondo/ignore [:deprecated-var]}
+             (-> col
+                 (->> (lib.normalize/normalize :metabase.query-processor.schema/result-metadata.column))
+                 ;; This is necessary, because in the wild, there may be cards created prior to this change.
+                 lib.temporal-bucket/ensure-temporal-unit-in-display-name
+                 lib.binning/ensure-binning-in-display-name))
+     :cljs (lib.normalize/normalize ::lib.schema.metadata/column col)))
