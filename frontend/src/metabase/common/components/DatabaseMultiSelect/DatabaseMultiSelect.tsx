@@ -126,9 +126,7 @@ export const DatabaseMultiSelect = ({
           rightSection={<Combobox.Chevron />}
           rightSectionPointerEvents="none"
           rightSectionWidth="3rem"
-          classNames={{
-            input: S.input,
-          }}
+          classNames={{ input: S.input }}
         >
           <Pill.Group className={S.pillGroup}>
             {pills}

@@ -1,8 +1,14 @@
 .input {
-  height: 52px;
+  --input-bd-focus: var(--mb-color-brand);
+
   display: flex;
   align-content: center;
   padding-inline-start: 1rem;
+  min-height: 3.25rem;
+
+  &:focus-within {
+    border-color: var(--input-bd-focus);
+  }
 }
 
 .pillGroup {
