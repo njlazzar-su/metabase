@@ -39,6 +39,6 @@
 }
 
 .optionIcon {
-  color: var(--mb-color-text-tertiary);
+  color: var(--mb-color-text-primary);
   flex-shrink: 0;
 }
