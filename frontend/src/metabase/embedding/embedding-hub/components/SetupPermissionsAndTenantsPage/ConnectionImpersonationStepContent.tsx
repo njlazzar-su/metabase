@@ -1,27 +1,32 @@
 /* eslint-disable metabase/no-literal-metabase-strings -- This string only shows for admins */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { t } from "ttag";
 
 import { useListDatabasesQuery } from "metabase/api";
+import { getErrorMessage } from "metabase/api/utils";
 import { DatabaseMultiSelect } from "metabase/common/components/DatabaseMultiSelect";
+import { useToast } from "metabase/common/hooks";
 import { Button, Flex, Stack, Text } from "metabase/ui";
 import type { Database, DatabaseId } from "metabase-types/api";
 
-import { useCreateConnectionImpersonations } from "./hooks/use-create-connection-impersonations";
+import { useUpdateTenantGroupPermissions } from "./hooks/use-update-tenant-permissions";
 
 const supportsConnectionImpersonation = (db: Database) =>
   db.features?.includes("connection-impersonation") ?? false;
 
-interface ConnectionImpersonationStepContentProps {
-  onNext: () => void;
-}
-
 export const ConnectionImpersonationStepContent = ({
   onNext,
-}: ConnectionImpersonationStepContentProps) => {
+}: {
+  onNext: () => void;
+}) => {
+  const [sendToast] = useToast();
+
+  const [isUpdatingPermissions, setUpdatingPermissions] = useState(false);
+
   const { data: databasesResponse } = useListDatabasesQuery();
+  const { updateDataAccess } = useUpdateTenantGroupPermissions();
 
   const databases = useMemo(
     () => databasesResponse?.data ?? [],
@@ -33,18 +38,32 @@ export const ConnectionImpersonationStepContent = ({
     [databases],
   );
 
-  const checkDatabaseDisabled = (database: Database) =>
-    !supportsConnectionImpersonation(database);
-
   const [selectedDatabaseIds, setSelectedDatabaseIds] = useState<DatabaseId[]>(
     [],
   );
 
-  const { handleCreateImpersonations, isCreating } =
-    useCreateConnectionImpersonations({
-      databaseIds: selectedDatabaseIds,
-      onSuccess: onNext,
-    });
+  const handleCreateImpersonations = useCallback(async () => {
+    if (selectedDatabaseIds.length === 0) {
+      return;
+    }
+
+    setUpdatingPermissions(true);
+
+    try {
+      await updateDataAccess({ impersonatedDatabaseIds: selectedDatabaseIds });
+
+      onNext();
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        t`Failed to configure connection impersonation`,
+      );
+
+      sendToast({ icon: "warning", toastColor: "error", message });
+    } finally {
+      setUpdatingPermissions(false);
+    }
+  }, [selectedDatabaseIds, updateDataAccess, onNext, sendToast]);
 
   const isNextDisabled = selectedDatabaseIds.length === 0;
 
@@ -78,7 +97,7 @@ export const ConnectionImpersonationStepContent = ({
         databases={databases}
         value={selectedDatabaseIds}
         onChange={setSelectedDatabaseIds}
-        isOptionDisabled={checkDatabaseDisabled}
+        isOptionDisabled={(db) => !supportsConnectionImpersonation(db)}
         disabledOptionTooltip={t`This database doesn't support connection impersonation`}
       />
 
@@ -86,7 +105,7 @@ export const ConnectionImpersonationStepContent = ({
         <Button
           variant="filled"
           disabled={isNextDisabled}
-          loading={isCreating}
+          loading={isUpdatingPermissions}
           onClick={handleCreateImpersonations}
         >
           {t`Next`}
