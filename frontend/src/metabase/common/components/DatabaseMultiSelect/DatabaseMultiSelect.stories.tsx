@@ -111,3 +111,15 @@ export const EmptyDatabases = {
     />
   ),
 };
+
+export const WithDisabledOptions = {
+  name: "With disabled options",
+  render: () => (
+    <DatabaseMultiSelectWrapper
+      databases={mockDatabases}
+      placeholder="Pick a database"
+      isOptionDisabled={(db) => db.id === 2}
+      disabledOptionTooltip="Connection impersonation is not supported for this database"
+    />
+  ),
+};

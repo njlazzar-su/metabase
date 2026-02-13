@@ -16,9 +16,13 @@ const mockDatabases: Database[] = [
 const TestDatabaseMultiSelect = ({
   initialValue = [],
   databases = mockDatabases,
+  isOptionDisabled,
+  disabledOptionTooltip,
 }: {
   initialValue?: number[];
   databases?: Database[];
+  isOptionDisabled?: (database: Database) => boolean;
+  disabledOptionTooltip?: string;
 }) => {
   const [value, setValue] = useState(initialValue);
 
@@ -28,6 +32,8 @@ const TestDatabaseMultiSelect = ({
       value={value}
       onChange={setValue}
       placeholder="Pick a database"
+      isOptionDisabled={isOptionDisabled}
+      disabledOptionTooltip={disabledOptionTooltip}
     />
   );
 };
@@ -88,5 +94,24 @@ describe("DatabaseMultiSelect", () => {
     render(<TestDatabaseMultiSelect databases={[]} />);
 
     expect(screen.getByPlaceholderText("Pick a database")).toBeInTheDocument();
+  });
+
+  it("should prevent selecting disabled options", async () => {
+    render(
+      <TestDatabaseMultiSelect
+        isOptionDisabled={(db) => db.id === 1}
+        disabledOptionTooltip="Not supported"
+      />,
+    );
+
+    await userEvent.click(screen.getByPlaceholderText("Pick a database"));
+
+    const option = await screen.findByRole("option", { name: /Database 1/ });
+    await userEvent.click(option);
+
+    // clicking a disabled option should not select it
+    expect(
+      screen.queryByLabelText("Remove Database 1"),
+    ).not.toBeInTheDocument();
   });
 });
