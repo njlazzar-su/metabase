@@ -45,7 +45,28 @@
   }
 }
 
+.optionDisabled {
+  padding: 0.5rem;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.optionContent {
+  flex: 1;
+}
+
 .optionIcon {
   color: var(--mb-color-text-primary);
   flex-shrink: 0;
+}
+
+.optionIconDisabled {
+  color: var(--mb-color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.disabledInfoIcon {
+  color: var(--mb-color-text-secondary);
+  flex-shrink: 0;
+  margin-left: auto;
 }

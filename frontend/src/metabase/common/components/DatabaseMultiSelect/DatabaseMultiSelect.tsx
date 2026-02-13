@@ -9,6 +9,7 @@ import {
   PillsInput,
   ScrollArea,
   Text,
+  Tooltip,
   useCombobox,
 } from "metabase/ui";
 import type { Database, DatabaseId } from "metabase-types/api";
@@ -24,6 +25,10 @@ export interface DatabaseMultiSelectProps {
   description?: string;
   disabled?: boolean;
   "data-testid"?: string;
+  /** Callback to determine if a database option should be disabled */
+  isOptionDisabled?: (database: Database) => boolean;
+  /** Tooltip text to show for disabled options */
+  disabledOptionTooltip?: string;
 }
 
 export const DatabaseMultiSelect = ({
@@ -35,6 +40,8 @@ export const DatabaseMultiSelect = ({
   description,
   disabled,
   "data-testid": dataTestId,
+  isOptionDisabled,
+  disabledOptionTooltip,
 }: DatabaseMultiSelectProps) => {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
@@ -98,19 +105,40 @@ export const DatabaseMultiSelect = ({
     </Pill>
   ));
 
-  const options = filteredDatabases.map((database) => (
-    <Combobox.Option
-      key={database.id}
-      value={String(database.id)}
-      className={S.option}
-    >
-      <Flex align="center" gap="sm">
-        <Icon name="database" size={16} className={S.optionIcon} />
+  const options = filteredDatabases.map((database) => {
+    const isDisabled = isOptionDisabled?.(database) ?? false;
 
-        <Text size="md">{database.name}</Text>
+    const optionContent = (
+      <Flex align="center" gap="sm" className={S.optionContent}>
+        <Icon
+          name="database"
+          size={16}
+          className={isDisabled ? S.optionIconDisabled : S.optionIcon}
+        />
+
+        <Text size="md" c={isDisabled ? "text-tertiary" : undefined}>
+          {database.name}
+        </Text>
+
+        {isDisabled && disabledOptionTooltip && (
+          <Tooltip label={disabledOptionTooltip} position="top">
+            <Icon name="info" size={16} className={S.disabledInfoIcon} />
+          </Tooltip>
+        )}
       </Flex>
-    </Combobox.Option>
-  ));
+    );
+
+    return (
+      <Combobox.Option
+        key={database.id}
+        value={String(database.id)}
+        className={isDisabled ? S.optionDisabled : S.option}
+        disabled={isDisabled}
+      >
+        {optionContent}
+      </Combobox.Option>
+    );
+  });
 
   return (
     <Combobox
