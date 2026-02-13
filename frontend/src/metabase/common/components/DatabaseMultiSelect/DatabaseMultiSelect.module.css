@@ -1,0 +1,44 @@
+.input {
+  padding-block: 0.5rem;
+  padding-inline-start: 0.5rem;
+  padding-inline-end: 2.5rem;
+  min-height: 3rem;
+}
+
+.pillGroup {
+  min-height: 1.875rem;
+  display: flex;
+  align-items: center;
+}
+
+.pillRemove {
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--mb-color-text-secondary);
+
+  &:hover {
+    color: var(--mb-color-text-primary);
+  }
+}
+
+.pillContent {
+  color: var(--mb-color-text-primary);
+}
+
+.dropdown {
+  border-radius: rem(6px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+}
+
+.option {
+  padding: rem(8px) rem(16px);
+
+  &:hover {
+    background-color: var(--mb-color-background-hover);
+  }
+}
+
+.optionIcon {
+  color: var(--mb-color-text-tertiary);
+  flex-shrink: 0;
+}
