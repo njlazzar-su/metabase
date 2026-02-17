@@ -1,15 +1,18 @@
 /* eslint-disable metabase/no-literal-metabase-strings */
+
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { t } from "ttag";
+import { jt, t } from "ttag";
 
 import { useUpdateSettingsMutation } from "metabase/api";
 import { useGetEmbeddingHubChecklistQuery } from "metabase/api/embedding-hub";
+import { CopyButton } from "metabase/common/components/CopyButton";
 import { OnboardingStepper } from "metabase/common/components/OnboardingStepper";
 import type { OnboardingStepperHandle } from "metabase/common/components/OnboardingStepper/types";
-import { useToast } from "metabase/common/hooks";
+import { useDocsUrl, useSetting, useToast } from "metabase/common/hooks";
 import { UtilApi } from "metabase/services";
 import {
+  Anchor,
   Button,
   Group,
   Icon,
@@ -31,8 +34,21 @@ export const SetupSsoPage = () => {
   const [updateSettings, { isLoading: isUpdatingSettings }] =
     useUpdateSettingsMutation();
 
+  const jwtSharedSecret = useSetting("jwt-shared-secret");
+
+  // This iframe is a placeholder url for the JWT-specific docs.
+  // TODO(EMB-1337): replace this with standalone JWT backend docs page.
+  const { url: jwtDocsUrl, showMetabaseLinks } = useDocsUrl(
+    "embedding/authentication",
+  );
+
+  const jwtDocsIframeUrl = `${jwtDocsUrl}?hide_nav=true&no_gdpr=true`;
+
   const [jwtIdentityProviderUri, setJwtIdentityProviderUri] = useState("");
   const [uriError, setUriError] = useState<string | null>(null);
+
+  // UI-only state for step 2, similar to isStrategyConfirmed in permissions page
+  const [isAddEndpointConfirmed, setIsAddEndpointConfirmed] = useState(false);
 
   const isSsoConfigured = checklist?.["secure-embeds"] ?? false;
 
@@ -68,13 +84,18 @@ export const SetupSsoPage = () => {
     }
   }, [jwtIdentityProviderUri, updateSettings, sendToast]);
 
+  const handleAddEndpointNext = useCallback(() => {
+    setIsAddEndpointConfirmed(true);
+    stepperRef.current?.goToNextStep();
+  }, []);
+
   const completedSteps = useMemo(() => {
     return {
       "setup-jwt": isSsoConfigured,
-      "add-endpoint": false,
+      "add-endpoint": isAddEndpointConfirmed,
       "test-jwt": false,
     };
-  }, [isSsoConfigured]);
+  }, [isSsoConfigured, isAddEndpointConfirmed]);
 
   return (
     <Stack mx="auto" gap="sm" maw={680}>
@@ -133,9 +154,38 @@ export const SetupSsoPage = () => {
           title={t`Add a new endpoint to your app`}
         >
           <Stack gap="lg">
-            <Text size="md" c="text-secondary" lh="lg">
-              {t`Add a new endpoint to your app to handle JWT authentication.`}
-            </Text>
+            <TextInput
+              label={t`JWT Signing Key`}
+              description={t`This secret is used to sign JWT tokens. Replace YOUR_SECRET_HERE in the below snippet with this value.`}
+              value={jwtSharedSecret ?? ""}
+              readOnly
+              rightSection={<CopyButton value={jwtSharedSecret ?? ""} />}
+              rightSectionWidth={40}
+            />
+
+            {showMetabaseLinks && (
+              <iframe
+                src={jwtDocsIframeUrl}
+                title={t`JWT Authentication Documentation`}
+                className={S.docsIframe}
+              />
+            )}
+
+            {showMetabaseLinks && (
+              <Text size="sm" c="text-secondary">
+                {jt`You can view more examples in the ${(
+                  <Anchor key="docs-link" href={jwtDocsUrl} target="_blank">
+                    {t`docs`}
+                  </Anchor>
+                )}.`}
+              </Text>
+            )}
+
+            <Group justify="flex-end">
+              <Button variant="filled" onClick={handleAddEndpointNext}>
+                {t`Next`}
+              </Button>
+            </Group>
           </Stack>
         </OnboardingStepper.Step>
 
