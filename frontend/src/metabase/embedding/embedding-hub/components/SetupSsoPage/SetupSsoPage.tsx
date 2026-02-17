@@ -50,7 +50,11 @@ export const SetupSsoPage = () => {
   // UI-only state for step 2, similar to isStrategyConfirmed in permissions page
   const [isAddEndpointConfirmed, setIsAddEndpointConfirmed] = useState(false);
 
-  const isSsoConfigured = checklist?.["secure-embeds"] ?? false;
+  // State for step 3 troubleshooting view
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
+
+  const isSsoConfigured = checklist?.["sso-configured"] ?? false;
+  const isSsoAuthManualTested = checklist?.["sso-auth-manual-tested"] ?? false;
 
   const handleEnableJwtAuthentication = useCallback(async () => {
     // Validate the URI field
@@ -89,13 +93,31 @@ export const SetupSsoPage = () => {
     stepperRef.current?.goToNextStep();
   }, []);
 
+  const handleLoginWorksDone = useCallback(async () => {
+    try {
+      await updateSettings({
+        "embedding-hub-sso-auth-manual-tested": true,
+      }).unwrap();
+    } catch (error) {
+      sendToast({
+        icon: "warning",
+        toastColor: "error",
+        message: t`Failed to save SSO test status`,
+      });
+    }
+  }, [updateSettings, sendToast]);
+
+  const handleCouldNotLogIn = useCallback(() => {
+    setShowTroubleshooting(true);
+  }, []);
+
   const completedSteps = useMemo(() => {
     return {
       "setup-jwt": isSsoConfigured,
-      "add-endpoint": isAddEndpointConfirmed,
-      "test-jwt": false,
+      "add-endpoint": isAddEndpointConfirmed || isSsoAuthManualTested,
+      "test-jwt": isSsoAuthManualTested,
     };
-  }, [isSsoConfigured, isAddEndpointConfirmed]);
+  }, [isSsoConfigured, isAddEndpointConfirmed, isSsoAuthManualTested]);
 
   return (
     <Stack mx="auto" gap="sm" maw={680}>
@@ -192,14 +214,62 @@ export const SetupSsoPage = () => {
         <OnboardingStepper.Step
           stepId="test-jwt"
           title={t`Test that JWT authentication is working correctly`}
+          hideTitleOnActive
         >
-          <Stack gap="lg">
-            <Text size="md" c="text-secondary" lh="lg">
-              {t`Verify that your JWT authentication setup is working correctly.`}
-            </Text>
-          </Stack>
+          {showTroubleshooting ? (
+            <SsoTroubleshootingView
+              onBack={() => setShowTroubleshooting(false)}
+            />
+          ) : (
+            <Stack gap="lg">
+              <Title
+                order={3}
+              >{t`Try logging in with SSO. Did it work?`}</Title>
+
+              <Text size="md" c="text-secondary" lh="lg">
+                {t`To check if JWT authentication was configured successfully, open Metabase in a different browser or in a private tab and try logging in to your account using single sign-on (SSO). Is login working correctly?`}
+              </Text>
+
+              <Group justify="center">
+                <Button variant="outline" onClick={handleCouldNotLogIn}>
+                  {t`No, I couldn't log in`}
+                </Button>
+                <Button
+                  variant="filled"
+                  onClick={handleLoginWorksDone}
+                  loading={isUpdatingSettings}
+                >
+                  {t`Log in works, I'm done`}
+                </Button>
+              </Group>
+            </Stack>
+          )}
         </OnboardingStepper.Step>
       </OnboardingStepper>
+    </Stack>
+  );
+};
+
+interface SsoTroubleshootingViewProps {
+  onBack: () => void;
+}
+
+const SsoTroubleshootingView = ({ onBack }: SsoTroubleshootingViewProps) => {
+  return (
+    <Stack gap="lg">
+      <Title order={3}>{t`Troubleshooting`}</Title>
+
+      <Text size="md" c="text-secondary" lh="lg">
+        {t`If you're having trouble logging in with SSO, check the following:`}
+      </Text>
+
+      {/* TODO: Add troubleshooting content here */}
+
+      <Group justify="flex-start">
+        <Button variant="outline" onClick={onBack}>
+          {t`Back`}
+        </Button>
+      </Group>
     </Stack>
   );
 };
