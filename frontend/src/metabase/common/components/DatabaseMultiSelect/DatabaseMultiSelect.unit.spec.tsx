@@ -85,9 +85,12 @@ describe("DatabaseMultiSelect", () => {
   it("should show pre-selected databases as pills", () => {
     render(<TestDatabaseMultiSelect initialValue={[1, 2]} />);
 
-    // pills have remove buttons with aria-label
-    expect(screen.getByLabelText("Remove Database 1")).toBeInTheDocument();
-    expect(screen.getByLabelText("Remove Database 2")).toBeInTheDocument();
+    // pills show database names
+    expect(screen.getByText("Database 1")).toBeInTheDocument();
+    expect(screen.getByText("Database 2")).toBeInTheDocument();
+
+    // each pill has a remove button
+    expect(screen.getAllByLabelText("Remove")).toHaveLength(2);
   });
 
   it("should handle empty databases list", () => {
@@ -109,9 +112,7 @@ describe("DatabaseMultiSelect", () => {
     const option = await screen.findByRole("option", { name: /Database 1/ });
     await userEvent.click(option);
 
-    // clicking a disabled option should not select it
-    expect(
-      screen.queryByLabelText("Remove Database 1"),
-    ).not.toBeInTheDocument();
+    // clicking a disabled option should not select it - no pills should appear
+    expect(screen.queryByLabelText("Remove")).not.toBeInTheDocument();
   });
 });

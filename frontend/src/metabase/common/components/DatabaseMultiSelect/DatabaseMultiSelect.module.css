@@ -1,54 +1,17 @@
-.input {
-  --input-bd-focus: var(--mb-color-brand);
-
-  display: flex;
-  align-content: center;
-  padding-inline-start: 1rem;
-  min-height: 3.25rem;
-
-  &:focus-within {
-    border-color: var(--input-bd-focus);
-  }
+.pill {
+  padding: 0.25rem 1rem;
 }
 
-.pillGroup {
-  display: flex;
-  align-items: center;
+.input:focus-within {
+  border-color: var(--mb-color-brand);
 }
 
-.field {
-  height: 1.75rem;
-  display: flex;
-  align-items: center;
-  margin-inline-start: 0.5rem;
-}
-
-.pillRemove {
-  cursor: pointer;
-  flex-shrink: 0;
-  color: var(--mb-color-text-secondary);
-
-  &:hover {
-    color: var(--mb-color-text-primary);
-  }
+.option {
+  padding: 0.4rem 0.5rem;
 }
 
 .pillContent {
   color: var(--mb-color-text-primary);
-}
-
-.option {
-  padding: 0.5rem;
-
-  &:hover {
-    background-color: var(--mb-color-background-hover);
-  }
-}
-
-.optionDisabled {
-  padding: 0.5rem;
-  cursor: not-allowed;
-  opacity: 1;
 }
 
 .optionContent {
