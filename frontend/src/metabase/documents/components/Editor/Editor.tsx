@@ -30,13 +30,16 @@ import {
   type PromptSerializer,
 } from "metabase/rich_text_editing/tiptap/extensions/MetabotEmbed";
 import { MetabotMentionExtension } from "metabase/rich_text_editing/tiptap/extensions/MetabotMention/MetabotMentionExtension";
-import { MetabotMentionSuggestion } from "metabase/rich_text_editing/tiptap/extensions/MetabotMention/MetabotSuggestion";
+import { createMetabotMentionSuggestion } from "metabase/rich_text_editing/tiptap/extensions/MetabotMention/MetabotSuggestion";
 import { PlainLink } from "metabase/rich_text_editing/tiptap/extensions/PlainLink/PlainLink";
 import { ResizeNode } from "metabase/rich_text_editing/tiptap/extensions/ResizeNode/ResizeNode";
 import { SmartLink } from "metabase/rich_text_editing/tiptap/extensions/SmartLink/SmartLinkNode";
 import { SupportingText } from "metabase/rich_text_editing/tiptap/extensions/SupportingText/SupportingText";
 import { DROP_ZONE_COLOR } from "metabase/rich_text_editing/tiptap/extensions/shared/constants";
-import { createSuggestionRenderer } from "metabase/rich_text_editing/tiptap/extensions/suggestionRenderer";
+import {
+  createBareSuggestionRenderer,
+  createSuggestionRenderer,
+} from "metabase/rich_text_editing/tiptap/extensions/suggestionRenderer";
 import { getSetting } from "metabase/selectors/settings";
 import { Box, Loader } from "metabase/ui";
 import type { State } from "metabase-types/store";
@@ -156,7 +159,18 @@ export const Editor: React.FC<EditorProps> = ({
       MetabotMentionExtension.configure({
         suggestion: {
           allow: ({ state }) => isMetabotBlock(state),
-          render: createSuggestionRenderer(MetabotMentionSuggestion),
+          render: createBareSuggestionRenderer(
+            createMetabotMentionSuggestion({
+              searchModels: [
+                "dataset",
+                "metric",
+                "card",
+                "table",
+                "database",
+                "dashboard",
+              ],
+            }),
+          ),
         },
       }),
       ResizeNode,
