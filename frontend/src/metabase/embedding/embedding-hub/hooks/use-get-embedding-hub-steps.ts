@@ -101,9 +101,8 @@ export const useGetEmbeddingHubSteps = (): EmbeddingHubStep[] => {
       actions: [
         {
           title: t`Configure SSO`,
-          description: t`Configure JWT or SAML authentication to ensure only authorized users can access your embeds.`,
-          docsPath: "embedding/embedded-analytics-js",
-          anchor: "set-up-sso",
+          description: t`Configure JWT authentication to ensure only authorized users can access your embeds.`,
+          to: "/admin/embedding/setup-guide/sso",
           variant: "outline",
           stepId: "secure-embeds",
         },
