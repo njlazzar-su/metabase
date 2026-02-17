@@ -54,13 +54,13 @@ const mapStateToProps = (
 interface DashcardCardParameterMapperProps {
   card: Card;
   dashcard: DashboardCard;
-  editingParameter: Parameter | null | undefined;
-  target: ParameterTarget | null | undefined;
+  editingParameter?: Parameter | null | undefined;
+  target?: ParameterTarget | null | undefined;
   isMobile: boolean;
   // virtual cards will not have question
   question?: Question;
-  mappingOptions: ParameterMappingOption[];
-  isRecentlyAutoConnected: boolean;
+  mappingOptions?: ParameterMappingOption[];
+  isRecentlyAutoConnected?: boolean;
   editingParameterInlineDashcard?: DashboardCard;
   compact?: boolean;
 }
@@ -72,8 +72,8 @@ export function DashCardCardParameterMapper({
   target,
   isMobile,
   question,
-  mappingOptions,
-  isRecentlyAutoConnected,
+  mappingOptions = [],
+  isRecentlyAutoConnected = false,
   editingParameterInlineDashcard,
   compact,
 }: DashcardCardParameterMapperProps) {
