@@ -186,7 +186,7 @@ export function MultiAutocomplete({
             description={description}
             error={error}
             required={required}
-            rightSection={rightSection ?? infoIcon}
+            rightSection={rightSection === undefined ? infoIcon : rightSection}
             withAsterisk={withAsterisk}
             labelProps={labelProps}
             descriptionProps={descriptionProps}
