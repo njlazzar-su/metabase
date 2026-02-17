@@ -139,8 +139,9 @@
                 Pass ::no-user to simulate an unlinked Slack user (returns nil).
 
    Calls body-fn with a map containing tracking atoms:
-   {:post-calls, :delete-calls, :image-calls, :generate-png-calls, :generate-adhoc-png-calls,
-    :generate-adhoc-output-calls, :generate-card-output-calls, :ephemeral-calls, :fake-png-bytes}"
+   {:post-calls, :delete-calls, :image-calls, :generate-png-calls,
+    :generate-adhoc-output-calls, :generate-card-output-calls, :ephemeral-calls,
+    :fake-png-bytes}"
   [{:keys [ai-text data-parts user-id]
     :or   {data-parts []
            user-id    ::default}}
@@ -149,12 +150,10 @@
         delete-calls                (atom [])
         image-calls                 (atom [])
         generate-png-calls          (atom [])
-        generate-adhoc-png-calls    (atom [])
         generate-adhoc-output-calls (atom [])
         generate-card-output-calls  (atom [])
         ephemeral-calls             (atom [])
         fake-png-bytes              (byte-array [0x89 0x50 0x4E 0x47])
-        fake-text-output            "Mock text output"
         mock-user-id                (cond
                                       (= user-id ::default) (mt/user->id :rasta)
                                       (= user-id ::no-user) nil
@@ -181,17 +180,14 @@
                                            fake-png-bytes)
        slackbot/generate-card-output     (fn [card-id output-mode]
                                            (swap! generate-card-output-calls conj {:card-id card-id :output-mode output-mode})
-                                           (if (= output-mode :text)
-                                             {:type :text :content fake-text-output}
-                                             {:type :image :content fake-png-bytes}))
-       slackbot.query/generate-adhoc-png (fn [query & {:keys [display]}]
-                                           (swap! generate-adhoc-png-calls conj {:query query :display display})
-                                           fake-png-bytes)
+                                           (if (= output-mode :image)
+                                             {:type :image :content fake-png-bytes}
+                                             {:type :table :content [{:type "table" :rows [] :column_settings []}]}))
        slackbot.query/generate-adhoc-output (fn [query & {:keys [display output-mode]}]
                                               (swap! generate-adhoc-output-calls conj {:query query :display display :output-mode output-mode})
-                                              (if (= output-mode :text)
-                                                {:type :text :content fake-text-output}
-                                                {:type :image :content fake-png-bytes}))
+                                              (if (= output-mode :image)
+                                                {:type :image :content fake-png-bytes}
+                                                {:type :table :content [{:type "table" :rows [] :column_settings []}]}))
        slackbot/post-image               (fn [_client image-bytes filename channel thread-ts]
                                            (swap! image-calls conj {:image-bytes image-bytes
                                                                     :filename    filename
@@ -202,12 +198,10 @@
                 :delete-calls                delete-calls
                 :image-calls                 image-calls
                 :generate-png-calls          generate-png-calls
-                :generate-adhoc-png-calls    generate-adhoc-png-calls
                 :generate-adhoc-output-calls generate-adhoc-output-calls
                 :generate-card-output-calls  generate-card-output-calls
                 :ephemeral-calls             ephemeral-calls
-                :fake-png-bytes              fake-png-bytes
-                :fake-text-output            fake-text-output}))))
+                :fake-png-bytes              fake-png-bytes}))))
 
 (deftest edited-message-ignored-test
   (testing "POST /events ignores edited messages"
