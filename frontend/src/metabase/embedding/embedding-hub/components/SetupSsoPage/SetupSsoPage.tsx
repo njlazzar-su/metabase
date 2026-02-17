@@ -1,6 +1,6 @@
 /* eslint-disable metabase/no-literal-metabase-strings */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { jt, t } from "ttag";
 
@@ -10,6 +10,7 @@ import { CopyButton } from "metabase/common/components/CopyButton";
 import { OnboardingStepper } from "metabase/common/components/OnboardingStepper";
 import type { OnboardingStepperHandle } from "metabase/common/components/OnboardingStepper/types";
 import { useDocsUrl, useSetting, useToast } from "metabase/common/hooks";
+import { useHelpUrl } from "metabase/embedding/embedding-hub/hooks";
 import { UtilApi } from "metabase/services";
 import {
   Anchor,
@@ -35,6 +36,9 @@ export const SetupSsoPage = () => {
     useUpdateSettingsMutation();
 
   const jwtSharedSecret = useSetting("jwt-shared-secret");
+  const existingJwtIdentityProviderUri = useSetting(
+    "jwt-identity-provider-uri",
+  );
 
   // This iframe is a placeholder url for the JWT-specific docs.
   // TODO(EMB-1337): replace this with standalone JWT backend docs page.
@@ -45,7 +49,15 @@ export const SetupSsoPage = () => {
   const jwtDocsIframeUrl = `${jwtDocsUrl}?hide_nav=true&no_gdpr=true`;
 
   const [jwtIdentityProviderUri, setJwtIdentityProviderUri] = useState("");
+
   const [uriError, setUriError] = useState<string | null>(null);
+
+  // Initialize with existing IdP URL if available
+  useEffect(() => {
+    if (existingJwtIdentityProviderUri) {
+      setJwtIdentityProviderUri(existingJwtIdentityProviderUri);
+    }
+  }, [existingJwtIdentityProviderUri]);
 
   // UI-only state for step 2, similar to isStrategyConfirmed in permissions page
   const [isAddEndpointConfirmed, setIsAddEndpointConfirmed] = useState(false);
@@ -217,9 +229,7 @@ export const SetupSsoPage = () => {
           hideTitleOnActive
         >
           {showTroubleshooting ? (
-            <SsoTroubleshootingView
-              onBack={() => setShowTroubleshooting(false)}
-            />
+            <SsoTroubleshootingView onLoginWorksDone={handleLoginWorksDone} />
           ) : (
             <Stack gap="lg">
               <Title
@@ -230,14 +240,15 @@ export const SetupSsoPage = () => {
                 {t`To check if JWT authentication was configured successfully, open Metabase in a different browser or in a private tab and try logging in to your account using single sign-on (SSO). Is login working correctly?`}
               </Text>
 
-              <Group justify="center">
+              <Group justify="flex-end">
                 <Button variant="outline" onClick={handleCouldNotLogIn}>
                   {t`No, I couldn't log in`}
                 </Button>
                 <Button
+                  component={Link}
+                  to={SETUP_GUIDE_PATH}
                   variant="filled"
                   onClick={handleLoginWorksDone}
-                  loading={isUpdatingSettings}
                 >
                   {t`Log in works, I'm done`}
                 </Button>
@@ -251,23 +262,68 @@ export const SetupSsoPage = () => {
 };
 
 interface SsoTroubleshootingViewProps {
-  onBack: () => void;
+  onLoginWorksDone: () => void;
 }
 
-const SsoTroubleshootingView = ({ onBack }: SsoTroubleshootingViewProps) => {
+const SsoTroubleshootingView = ({
+  onLoginWorksDone,
+}: SsoTroubleshootingViewProps) => {
+  const helpUrl = useHelpUrl();
   return (
     <Stack gap="lg">
       <Title order={3}>{t`Troubleshooting`}</Title>
 
       <Text size="md" c="text-secondary" lh="lg">
-        {t`If you're having trouble logging in with SSO, check the following:`}
+        {t`Try the steps below before testing JWT authentication again. If nothing works, consider contacting support.`}
       </Text>
 
-      {/* TODO: Add troubleshooting content here */}
+      <Stack gap="md">
+        <div>
+          <Text fw={700} mb="xs">{t`404 error after SSO sign-in`}</Text>
+          <Text size="md" c="text-secondary" lh="lg">
+            {t`If after clicking on "Sign in with SSO", the browser returns a 404 error, make sure the value of the JWT SSO URI in admin settings / auth / JWT is pointing to your endpoint and your endpoint is up and running and available.`}
+          </Text>
+        </div>
 
-      <Group justify="flex-start">
-        <Button variant="outline" onClick={onBack}>
-          {t`Back`}
+        <div>
+          <Text
+            fw={700}
+            mb="xs"
+          >{t`JWT decryption error: "Message seems corrupt"`}</Text>
+          <Text size="md" c="text-secondary" lh="lg">
+            {t`If after being redirected from your app to Metabase, you see "Message seems corrupt or manipulated" there was an issue decrypting signed JWT. Ensure METABASE_JWT_SHARED_SECRET has the right value.`}
+          </Text>
+        </div>
+
+        <div>
+          <Text fw={700} mb="xs">{t`Tenant ID mismatch error`}</Text>
+          <Text size="md" c="text-secondary" lh="lg">
+            {t`If after being redirected from your app to Metabase, you see an error message "Tenant ID mismatch with existing user", your application is trying to sign in a the user with the wrong tenant slug. Review @tenant claim in the JWT and ensure it matches the tenant this tenant user belongs to.`}
+          </Text>
+        </div>
+
+        <div>
+          <Text
+            fw={700}
+            mb="xs"
+          >{t`User provisioning disabled for JWT SSO`}</Text>
+          <Text size="md" c="text-secondary" lh="lg">
+            {t`If after being redirected from your app to Metabase, you see an error message "Sorry, but you'll need a $SITENAME account to view this page, contact your administrator. User provisioning is turned off for JWT SSO in admin settings/authentication. Either turn this feature on to have users be provisioned if they don't exist yet, or ensure users exist before signing them in via JWT SSO.`}
+          </Text>
+        </div>
+      </Stack>
+
+      <Group justify="flex-end">
+        <Button component="a" href={helpUrl} target="_blank" variant="outline">
+          {t`Contact customer support`}
+        </Button>
+        <Button
+          component={Link}
+          to={SETUP_GUIDE_PATH}
+          variant="filled"
+          onClick={onLoginWorksDone}
+        >
+          {t`Log in works, I'm done`}
         </Button>
       </Group>
     </Stack>
