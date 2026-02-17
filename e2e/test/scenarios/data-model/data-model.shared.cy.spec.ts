@@ -769,7 +769,11 @@ describe.each<Area>(areas)("data model > %s", (area: Area) => {
           .findByTestId("header-cell")
           .findByTestId("cell-data")
           .parent()
-          .trigger("mouseenter");
+          .then(($el) => {
+            $el[0].dispatchEvent(
+              new MouseEvent("mouseenter", { bubbles: false }),
+            );
+          });
         H.hovercard().should("not.contain.text", "The total billed amount.");
 
         cy.visit(
@@ -2786,7 +2790,11 @@ function verifyTablePreview({
       cy.findByTestId("header-cell")
         .findByTestId("cell-data")
         .parent()
-        .trigger("mouseenter");
+        .then(($el) => {
+          $el[0].dispatchEvent(
+            new MouseEvent("mouseenter", { bubbles: false }),
+          );
+        });
     }
   });
 
