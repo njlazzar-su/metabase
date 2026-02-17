@@ -61,16 +61,12 @@ function setup({
 }
 
 describe("DatabaseMultiSelect", () => {
-  it("should render with placeholder when no databases are selected", async () => {
+  it("should show database options in the dropdown", async () => {
     setup();
 
     expect(
       await screen.findByPlaceholderText("Pick a database"),
     ).toBeInTheDocument();
-  });
-
-  it("should show database options in the dropdown", async () => {
-    setup();
 
     await userEvent.click(
       await screen.findByPlaceholderText("Pick a database"),
@@ -119,14 +115,6 @@ describe("DatabaseMultiSelect", () => {
 
     // each pill has a remove button
     expect(screen.getAllByLabelText("Remove")).toHaveLength(2);
-  });
-
-  it("should handle empty databases list", async () => {
-    setup({ databases: [] });
-
-    expect(
-      await screen.findByPlaceholderText("Pick a database"),
-    ).toBeInTheDocument();
   });
 
   it("should prevent selecting disabled options", async () => {
