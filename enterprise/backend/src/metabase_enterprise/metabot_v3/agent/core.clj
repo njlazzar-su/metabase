@@ -95,7 +95,7 @@
 
 (mr/def ::profile-id
   "Profile identifier keyword."
-  [:enum :embedding_next :internal :transforms_codegen :sql :nlq])
+  [:enum :embedding_next :internal :transforms_codegen :sql :nlq :document-generate-content])
 
 (mr/def ::part-type
   "Type of a part emitted by the agent loop."

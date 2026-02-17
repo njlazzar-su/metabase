@@ -123,6 +123,19 @@
                     #'agent-tools/create-chart-tool
                     #'agent-tools/edit-chart-tool]})
 
+(register-profile!
+ :document-generate-content
+ {:prompt-template "document-generate-content.selmer"
+  :model           "claude-haiku-4-5"
+  :max-iterations  10
+  :temperature     0.3
+  :tools           [#'agent-tools/list-available-data-sources-tool
+                    #'agent-tools/list-available-fields-tool
+                    #'agent-tools/get-field-values-tool
+                    #'agent-tools/construct-notebook-query-tool
+                    #'agent-tools/create-sql-query-tool
+                    #'agent-tools/create-chart-tool]})
+
 (def ^:private api-string->capability-keyword
   "Map from API capability strings (as sent by the frontend) to the keywords
   used in tool :capabilities metadata. Keywords pass through unchanged."
