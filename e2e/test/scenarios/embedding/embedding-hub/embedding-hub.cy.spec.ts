@@ -738,4 +738,169 @@ describe("scenarios - embedding hub", () => {
       });
     });
   });
+
+  describe("sso setup page", () => {
+    it("happy path: can configure JWT authentication and complete SSO setup", () => {
+      H.restore("setup");
+      cy.signInAsAdmin();
+      H.activateToken("pro-cloud");
+
+      cy.visit("/admin/embedding/setup-guide/sso");
+
+      cy.log("verify no steps are completed initially");
+      H.main().icon("check").should("not.exist");
+
+      cy.log("step 1: enter JWT Identity Provider URI and enable JWT");
+      H.main().within(() => {
+        cy.findByLabelText(/JWT Identity Provider URI/i)
+          .should("be.visible")
+          .type("https://jwt.example.com/auth");
+
+        cy.findByRole("button", {
+          name: "Enable JWT authentication and continue",
+        }).click();
+      });
+
+      cy.log("verify JWT settings were saved");
+      cy.request("GET", "/api/session/properties").then((response) => {
+        expect(response.body["jwt-enabled"]).to.equal(true);
+        expect(response.body["jwt-identity-provider-uri"]).to.equal(
+          "https://jwt.example.com/auth",
+        );
+        expect(response.body["jwt-shared-secret"]).to.be.a("string");
+        expect(response.body["jwt-group-sync"]).to.equal(true);
+      });
+
+      cy.log("step 1 should be marked as completed");
+      H.main()
+        .findByRole("listitem", { name: "Set up JWT authentication" })
+        .should("have.attr", "data-completed", "true");
+
+      cy.log("step 2: JWT signing key should be displayed");
+      H.main().within(() => {
+        cy.findByLabelText(/JWT Signing Key/i).should("be.visible");
+
+        cy.findByRole("button", { name: "Next" }).click();
+      });
+
+      cy.log("step 2 should be marked as completed");
+      H.main()
+        .findByRole("listitem", { name: "Add a new endpoint to your app" })
+        .should("have.attr", "data-completed", "true");
+
+      cy.log("step 3: confirm login works");
+      H.main().within(() => {
+        cy.findByText("Try logging in with SSO. Did it work?").should(
+          "be.visible",
+        );
+
+        cy.findByRole("link", { name: "Log in works, I'm done" }).click();
+      });
+
+      cy.log("should navigate back to setup guide");
+      cy.url().should("include", "/admin/embedding/setup-guide");
+      cy.url().should("not.include", "/sso");
+
+      cy.log("verify sso-auth-manual-tested setting was saved");
+      cy.request("GET", "/api/session/properties").then((response) => {
+        expect(response.body["embedding-hub-sso-auth-manual-tested"]).to.equal(
+          true,
+        );
+      });
+    });
+
+    it("step 1 validation: empty JWT Identity Provider URI shows error", () => {
+      H.restore("setup");
+      cy.signInAsAdmin();
+      H.activateToken("pro-cloud");
+
+      cy.visit("/admin/embedding/setup-guide/sso");
+
+      cy.log("try to submit without entering URI");
+      H.main()
+        .findByRole("button", {
+          name: "Enable JWT authentication and continue",
+        })
+        .click();
+
+      cy.log("error message should be shown");
+      H.main()
+        .findByText("JWT Identity Provider URI is required")
+        .should("be.visible");
+
+      cy.log("should still be on step 1");
+      H.main()
+        .findByRole("listitem", { name: "Set up JWT authentication" })
+        .should("have.attr", "data-completed", "false");
+    });
+
+    it("troubleshooting view shows /help link for non-paid plans", () => {
+      H.restore("setup");
+      cy.signInAsAdmin();
+      H.activateToken("starter");
+
+      cy.log("enable JWT to get to step 3");
+      cy.request("PUT", "/api/setting", {
+        "jwt-enabled": true,
+        "jwt-identity-provider-uri": "https://jwt.example.com/auth",
+        "jwt-shared-secret": "0".repeat(64),
+      });
+
+      cy.visit("/admin/embedding/setup-guide/sso");
+
+      cy.log("navigate to step 3");
+      H.main()
+        .findByRole("listitem", {
+          name: "Test that JWT authentication is working correctly",
+        })
+        .click();
+
+      cy.log("click troubleshooting button");
+      H.main().findByRole("button", { name: "No, I couldn't log in" }).click();
+
+      cy.log("troubleshooting view should be shown");
+      H.main().findByText("Troubleshooting").should("be.visible");
+
+      cy.log("help link should point to /help (non-paid)");
+      H.main()
+        .findByRole("link", { name: "Contact customer support" })
+        .should("have.attr", "href")
+        .and("include", "metabase.com/help")
+        .and("not.include", "help-premium");
+    });
+
+    it("troubleshooting view shows /help-premium link for paid plans", () => {
+      H.restore("setup");
+      cy.signInAsAdmin();
+      H.activateToken("pro-cloud");
+
+      cy.log("enable JWT to get to step 3");
+      cy.request("PUT", "/api/setting", {
+        "jwt-enabled": true,
+        "jwt-identity-provider-uri": "https://jwt.example.com/auth",
+        "jwt-shared-secret": "0".repeat(64),
+      });
+
+      cy.visit("/admin/embedding/setup-guide/sso");
+
+      cy.log("navigate to step 3");
+      H.main()
+        .findByRole("listitem", {
+          name: "Test that JWT authentication is working correctly",
+        })
+        .click();
+
+      cy.log("click troubleshooting button");
+      H.main().findByRole("button", { name: "No, I couldn't log in" }).click();
+
+      cy.log("troubleshooting view should be shown");
+      H.main().findByText("Troubleshooting").should("be.visible");
+
+      cy.log("help link should point to /help-premium (paid)");
+      H.main()
+        .findByRole("link", { name: "Contact customer support" })
+        .should("have.attr", "href")
+        .and("include", "metabase.com/help-premium");
+    });
+  });
 });
