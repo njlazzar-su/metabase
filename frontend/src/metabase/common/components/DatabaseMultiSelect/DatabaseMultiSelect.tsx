@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { t } from "ttag";
 
+import { useListDatabasesQuery } from "metabase/api";
 import {
   type ComboboxItem,
   Flex,
@@ -14,7 +15,6 @@ import type { Database, DatabaseId } from "metabase-types/api";
 import S from "./DatabaseMultiSelect.module.css";
 
 export interface DatabaseMultiSelectProps {
-  databases: Database[];
   value: DatabaseId[];
   onChange: (value: DatabaseId[]) => void;
   placeholder?: string;
@@ -31,7 +31,6 @@ export interface DatabaseMultiSelectProps {
 }
 
 export const DatabaseMultiSelect = ({
-  databases,
   value,
   onChange,
   placeholder = t`Pick a database`,
@@ -42,6 +41,13 @@ export const DatabaseMultiSelect = ({
   isOptionDisabled,
   disabledOptionTooltip,
 }: DatabaseMultiSelectProps) => {
+  const { data: databasesResponse } = useListDatabasesQuery();
+
+  const databases = useMemo(
+    () => databasesResponse?.data ?? [],
+    [databasesResponse?.data],
+  );
+
   const databaseIds = useMemo(() => value.map(String), [value]);
 
   const options = useMemo(() => {

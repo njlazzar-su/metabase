@@ -1,7 +1,8 @@
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
-import { render, screen, waitFor } from "__support__/ui";
+import { setupDatabasesEndpoints } from "__support__/server-mocks";
+import { renderWithProviders, screen, waitFor } from "__support__/ui";
 import type { Database } from "metabase-types/api";
 import { createMockDatabase } from "metabase-types/api/mocks";
 
@@ -15,12 +16,10 @@ const mockDatabases: Database[] = [
 
 const TestDatabaseMultiSelect = ({
   initialValue = [],
-  databases = mockDatabases,
   isOptionDisabled,
   disabledOptionTooltip,
 }: {
   initialValue?: number[];
-  databases?: Database[];
   isOptionDisabled?: (database: Database) => boolean;
   disabledOptionTooltip?: string;
 }) => {
@@ -28,7 +27,6 @@ const TestDatabaseMultiSelect = ({
 
   return (
     <DatabaseMultiSelect
-      databases={databases}
       value={value}
       onChange={setValue}
       placeholder="Pick a database"
@@ -38,17 +36,45 @@ const TestDatabaseMultiSelect = ({
   );
 };
 
-describe("DatabaseMultiSelect", () => {
-  it("should render with placeholder when no databases are selected", () => {
-    render(<TestDatabaseMultiSelect />);
+interface SetupOpts {
+  initialValue?: number[];
+  databases?: Database[];
+  isOptionDisabled?: (database: Database) => boolean;
+  disabledOptionTooltip?: string;
+}
 
-    expect(screen.getByPlaceholderText("Pick a database")).toBeInTheDocument();
+function setup({
+  initialValue = [],
+  databases = mockDatabases,
+  isOptionDisabled,
+  disabledOptionTooltip,
+}: SetupOpts = {}) {
+  setupDatabasesEndpoints(databases);
+
+  renderWithProviders(
+    <TestDatabaseMultiSelect
+      initialValue={initialValue}
+      isOptionDisabled={isOptionDisabled}
+      disabledOptionTooltip={disabledOptionTooltip}
+    />,
+  );
+}
+
+describe("DatabaseMultiSelect", () => {
+  it("should render with placeholder when no databases are selected", async () => {
+    setup();
+
+    expect(
+      await screen.findByPlaceholderText("Pick a database"),
+    ).toBeInTheDocument();
   });
 
   it("should show database options in the dropdown", async () => {
-    render(<TestDatabaseMultiSelect />);
+    setup();
 
-    await userEvent.click(screen.getByPlaceholderText("Pick a database"));
+    await userEvent.click(
+      await screen.findByPlaceholderText("Pick a database"),
+    );
 
     await waitFor(() => {
       expect(
@@ -66,9 +92,11 @@ describe("DatabaseMultiSelect", () => {
   });
 
   it("should allow selecting a database", async () => {
-    render(<TestDatabaseMultiSelect />);
+    setup();
 
-    await userEvent.click(screen.getByPlaceholderText("Pick a database"));
+    await userEvent.click(
+      await screen.findByPlaceholderText("Pick a database"),
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Database 1")).toBeInTheDocument();
@@ -82,32 +110,34 @@ describe("DatabaseMultiSelect", () => {
     });
   });
 
-  it("should show pre-selected databases as pills", () => {
-    render(<TestDatabaseMultiSelect initialValue={[1, 2]} />);
+  it("should show pre-selected databases as pills", async () => {
+    setup({ initialValue: [1, 2] });
 
-    // pills show database names
-    expect(screen.getByText("Database 1")).toBeInTheDocument();
+    // pills show database names (wait for data to load)
+    expect(await screen.findByText("Database 1")).toBeInTheDocument();
     expect(screen.getByText("Database 2")).toBeInTheDocument();
 
     // each pill has a remove button
     expect(screen.getAllByLabelText("Remove")).toHaveLength(2);
   });
 
-  it("should handle empty databases list", () => {
-    render(<TestDatabaseMultiSelect databases={[]} />);
+  it("should handle empty databases list", async () => {
+    setup({ databases: [] });
 
-    expect(screen.getByPlaceholderText("Pick a database")).toBeInTheDocument();
+    expect(
+      await screen.findByPlaceholderText("Pick a database"),
+    ).toBeInTheDocument();
   });
 
   it("should prevent selecting disabled options", async () => {
-    render(
-      <TestDatabaseMultiSelect
-        isOptionDisabled={(db) => db.id === 1}
-        disabledOptionTooltip="Not supported"
-      />,
-    );
+    setup({
+      isOptionDisabled: (db) => db.id === 1,
+      disabledOptionTooltip: "Not supported",
+    });
 
-    await userEvent.click(screen.getByPlaceholderText("Pick a database"));
+    await userEvent.click(
+      await screen.findByPlaceholderText("Pick a database"),
+    );
 
     const option = await screen.findByRole("option", { name: /Database 1/ });
     await userEvent.click(option);
